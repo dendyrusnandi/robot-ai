@@ -1,0 +1,96 @@
+app:
+  name: RN AI BOT
+  language: id-ID
+  response_style: humoris
+  environment: development
+  debug: false
+ai:
+  provider: openai
+providers:
+  gemini:
+    model: gemini-3.1-flash-live-preview
+    thinking_level: minimal
+  openai:
+    model: gpt-realtime-2.1-mini
+    voice: echo
+    transcribe_model: gpt-4o-transcribe
+audio:
+  input_sample_rate: 16000
+  input_channels: 1
+  chunk_ms: 40
+  output_sample_rate: 24000
+  input_device: pulse
+  output_device: pulse
+  queue_size: 32
+  output_queue_size: 128
+  playback_buffer_ms: 320
+  output_latency: high
+  vad_enabled: true
+  vad_minimum_level: 280
+  vad_initial_noise_level: 120
+  vad_noise_ratio: 2.2
+  vad_rise_margin: 140
+  vad_pre_roll_ms: 240
+  vad_noise_ceiling: 1600
+  vad_attack_gap_ms: 120
+  listening_feedback_ms: 80
+  minimum_speech_ms: 400
+  silence_release_ms: 480
+  maximum_speech_ms: 12000
+  wake_word: RN
+  wake_word_mode: noisy_or_ambiguous
+  echo_guard_enabled: true
+  echo_guard_release_ms: 250
+  barge_in_enabled: true
+  barge_in_mode: bebas
+  barge_in_min_level: 0.40
+  barge_in_echo_ratio: 2.0
+  barge_in_chunks: 5
+  barge_in_grace_ms: 650
+  output_enabled: true
+  lipsync_enabled: true
+  idle_reengage_seconds: 180
+  thinking_timeout_seconds: 12
+  reconnect_initial_seconds: 1
+  reconnect_max_seconds: 15
+knowledge:
+  enabled: true
+  folder: knowledge
+  embedding_model: text-embedding-3-small
+  chunk_characters: 1400
+  chunk_overlap: 220
+  max_results: 4
+  minimum_score: 0.2
+  runtime_enabled: false
+camera:
+  enabled: true
+  startup_timeout_seconds: 3
+  device: 0
+  width: 1280
+  height: 720
+  capture_fps: 30
+  jpeg_quality: 80
+  send_continuous_video: false
+  ai_sample_fps: 1
+  runtime_enabled: true
+display:
+  mode: development
+  fullscreen: false
+  hide_cursor: false
+  width: 1280
+  height: 720
+  idle_sleep_seconds: 45
+robot:
+  enabled: false
+  serial_port: /dev/ttyUSB0
+  baudrate: 115200
+  command_timeout_ms: 1000
+safety:
+  ai_motion_enabled: false
+  max_speed_percent: 35
+  max_move_duration_ms: 2500
+  head:
+    yaw_min: -45
+    yaw_max: 45
+    pitch_min: -20
+    pitch_max: 25

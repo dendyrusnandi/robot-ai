@@ -1,0 +1,14 @@
+2026-08-30 19:49:42 [asyncio] DEBUG Using selector: _Selector
+2026-08-30 19:49:42 [CORE] INFO DENDY starting
+2026-08-30 19:50:30 [asyncio] DEBUG Using selector: _Selector
+2026-08-30 19:50:30 [CORE] INFO DENDY starting
+2026-08-30 19:50:56 [asyncio] DEBUG Using selector: _Selector
+2026-08-30 19:50:56 [CORE] INFO DENDY starting
+2026-08-30 19:50:58 [qasync._unix._Selector] DEBUG Closing
+2026-08-30 19:51:10 [asyncio] DEBUG Using selector: _Selector
+2026-08-30 19:51:10 [CORE] INFO DENDY starting
+2026-08-30 19:51:12 [CORE] INFO DENDY shutting down
+2026-08-30 19:51:12 [qasync._unix._Selector] DEBUG Closing
+2026-08-30 19:56:20 [asyncio] DEBUG Using selector: _Selector
+2026-08-30 19:56:21 [CORE] INFO DENDY starting
+2026-08-30 19:56:57 [qasync._unix._Selector] DEBUG Closing
