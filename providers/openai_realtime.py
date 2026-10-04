@@ -27,6 +27,7 @@ REALTIME_URL = "wss://api.openai.com/v1/realtime"
 OPENAI_PCM_RATE = 24000
 
 SYSTEM_INSTRUCTION = """Kamu adalah RN, robot AI humanoid yang ramah dan multibahasa.
+Dalam konteks identitasmu, RN berarti Robotika Nusantara, bukan Registered Nurse.
 Bahasa default kamu SELALU Bahasa Indonesia yang natural, jelas, dan ringkas, dan kamu
 memulai maupun kembali ke Bahasa Indonesia kecuali salah satu syarat di bawah terpenuhi.
 Hanya beralih ke bahasa lain jika pengguna mengucapkan SATU KALIMAT PENUH yang jelas dan
@@ -72,7 +73,11 @@ VISION_TOOL = {
 KNOWLEDGE_TOOL = {
     "type": "function",
     "name": "search_knowledge",
-    "description": "Search approved local company, product, FAQ, about-us, and manual documents before answering.",
+    "description": (
+        "Mandatory first step for every user request. Search the official Robotika "
+        "Nusantara vector-store knowledge before answering, including questions about "
+        "RN's identity, company, products, services, FAQ, policies, and manuals."
+    ),
     "parameters": {
         "type": "object",
         "properties": {"query": {"type": "string", "description": "The user's product or company question."}},
@@ -133,9 +138,11 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
         instructions += response_style_instruction(self.config)
         if knowledge_enabled:
             instructions += (
-                "\nUntuk pertanyaan tentang produk, perusahaan, FAQ, manual, layanan, "
-                "kebijakan, atau tentang kami, WAJIB panggil search_knowledge sebelum "
-                "menjawab. Utamakan dokumen knowledge dan jangan mengarang detail."
+                "\nUntuk SETIAP permintaan pengguna, WAJIB panggil search_knowledge "
+                "sebagai langkah pertama sebelum menjawab. Knowledge ini adalah sumber "
+                "resmi Robotika Nusantara. Utamakan hasil dokumen vector store daripada "
+                "pengetahuan umum model. Jika hasil tidak memuat jawabannya, katakan "
+                "bahwa informasi tidak ditemukan dan jangan mengarang detail."
             )
         tools = []
         if vision_enabled:
@@ -179,6 +186,10 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
                     },
                 },
                 "tools": tools,
+                "tool_choice": (
+                    {"type": "function", "name": "search_knowledge"}
+                    if knowledge_enabled else "auto"
+                ),
             },
         })
         updated = json.loads(await asyncio.wait_for(self._ws.recv(), timeout=15))
@@ -252,7 +263,13 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
                 "output": json.dumps(result),
             },
         })
-        await self._send({"type": "response.create"})
+        # The session forces search_knowledge for every new user turn. Once a
+        # tool result is present, allow the model to answer (or call camera)
+        # instead of forcing the same knowledge call into an infinite loop.
+        await self._send({
+            "type": "response.create",
+            "response": {"tool_choice": "auto"},
+        })
 
     async def interrupt(self) -> None:
         if self._ws is None:

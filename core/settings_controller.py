@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
-from PySide6.QtCore import Property, QObject, Signal, Slot
+from PySide6.QtCore import QCoreApplication, Property, QObject, QProcess, Signal, Slot
 
 
 class SettingsController(QObject):
@@ -53,6 +54,7 @@ class SettingsController(QObject):
             "debug": bool(self.config["app"].get("debug", False)),
             "knowledgeEnabled": bool(knowledge.get("enabled", True)),
             "knowledgeFolder": str(knowledge.get("folder", "knowledge")),
+            "vectorStoreId": str(knowledge.get("vector_store_id", "")),
         }
 
     @Slot("QVariantMap", result=str)
@@ -98,6 +100,12 @@ class SettingsController(QObject):
             if not folder or folder.startswith("/") or ".." in Path(folder).parts:
                 raise ValueError("folder knowledge harus berupa path relatif yang aman")
             knowledge["folder"] = folder
+            vector_store_id = str(values.get("vectorStoreId", "")).strip()
+            if vector_store_id and not vector_store_id.startswith("vs_"):
+                raise ValueError("Vector Store ID OpenAI harus diawali vs_")
+            if any(character.isspace() for character in vector_store_id):
+                raise ValueError("Vector Store ID OpenAI tidak boleh mengandung spasi")
+            knowledge["vector_store_id"] = vector_store_id
 
             api_key = str(values.get("apiKey", "")).strip()
             if api_key and ("\n" in api_key or "\r" in api_key):
@@ -120,6 +128,22 @@ class SettingsController(QObject):
             return message
         except (TypeError, ValueError, OSError) as exc:
             return f"Gagal menyimpan: {exc}"
+
+    @Slot(result=str)
+    def restart(self) -> str:
+        if getattr(sys, "frozen", False):
+            program = sys.executable
+            arguments: list[str] = []
+        else:
+            program = sys.executable
+            arguments = [str(self.root / "main.py")]
+
+        started = QProcess.startDetached(program, arguments, str(self.root))
+        success = started[0] if isinstance(started, tuple) else bool(started)
+        if not success:
+            return "Gagal restart: proses baru tidak dapat dijalankan."
+        QCoreApplication.quit()
+        return "Restarting RN AI Bot..."
 
     def _write_env_value(self, key: str, value: str) -> None:
         lines = self.env_path.read_text(encoding="utf-8").splitlines() if self.env_path.exists() else []

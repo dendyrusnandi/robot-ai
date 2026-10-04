@@ -11,6 +11,30 @@ Rectangle {
     property var current: settingsController.values
     property string statusText: ""
 
+    function formValues() {
+        return {
+            provider: providerSelect.currentText,
+            apiKey: apiKey.text, language: language.currentText, model: model.text,
+            responseStyle: responseStyle.currentText,
+            openaiVoice: openaiVoice.currentText,
+            vadEnabled: vad.checked, vadMinimumLevel: vadLevel.text,
+            vadNoiseRatio: noiseRatio.text, minimumSpeechMs: minimumSpeech.text,
+            silenceReleaseMs: silenceRelease.text, wakeWord: wakeWord.text,
+            echoGuard: echoGuard.checked,
+            bargeInMode: bargeInMode.currentText === "enable" ? "bebas" : "kata_kunci",
+            cameraDevice: cameraDevice.text, fullscreen: fullscreen.checked,
+            debug: debugMode.checked, knowledgeEnabled: knowledgeEnabled.checked,
+            knowledgeFolder: knowledgeFolder.text,
+            vectorStoreId: vectorStoreId.text
+        }
+    }
+
+    function saveAndRestart() {
+        statusText = settingsController.save(formValues())
+        if (statusText.startsWith("Tersimpan"))
+            statusText = settingsController.restart()
+    }
+
     function open() {
         current = settingsController.values
         statusText = ""
@@ -33,6 +57,7 @@ Rectangle {
         debugMode.checked = current.debug
         knowledgeEnabled.checked = current.knowledgeEnabled
         knowledgeFolder.text = current.knowledgeFolder || "knowledge"
+        vectorStoreId.text = current.vectorStoreId || ""
         visible = true
     }
 
@@ -145,6 +170,16 @@ Rectangle {
                     Switch { id: knowledgeEnabled; checked: current.knowledgeEnabled }
                     Text { text: "Folder knowledge"; color: "#a8dce5" }
                     TextField { id: knowledgeFolder; Layout.fillWidth: true; text: current.knowledgeFolder || "knowledge"; placeholderText: "knowledge" }
+                    Text { text: "OpenAI Vector Store ID"; color: "#a8dce5" }
+                    TextField {
+                        id: vectorStoreId
+                        Layout.fillWidth: true
+                        text: current.vectorStoreId || ""
+                        placeholderText: "vs_..."
+                        enabled: knowledgeEnabled.checked
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Kosongkan untuk memakai dokumen lokal dari folder knowledge"
+                    }
 
                     Text { text: "Perangkat kamera"; color: "#a8dce5" }
                     TextField { id: cameraDevice; Layout.fillWidth: true; text: current.cameraDevice || "0"; placeholderText: "0 atau /dev/video0" }
@@ -160,22 +195,13 @@ Rectangle {
                 Layout.alignment: Qt.AlignRight
                 Button { text: "Batal"; onClicked: panel.visible = false }
                 Button {
+                    text: "Restart"
+                    onClicked: panel.saveAndRestart()
+                }
+                Button {
                     text: "Simpan"
                     highlighted: true
-                    onClicked: panel.statusText = settingsController.save({
-                        provider: providerSelect.currentText,
-                        apiKey: apiKey.text, language: language.currentText, model: model.text,
-                        responseStyle: responseStyle.currentText,
-                        openaiVoice: openaiVoice.currentText,
-                        vadEnabled: vad.checked, vadMinimumLevel: vadLevel.text,
-                        vadNoiseRatio: noiseRatio.text, minimumSpeechMs: minimumSpeech.text,
-                        silenceReleaseMs: silenceRelease.text, wakeWord: wakeWord.text,
-                        echoGuard: echoGuard.checked,
-                        bargeInMode: bargeInMode.currentText === "enable" ? "bebas" : "kata_kunci",
-                        cameraDevice: cameraDevice.text, fullscreen: fullscreen.checked,
-                        debug: debugMode.checked, knowledgeEnabled: knowledgeEnabled.checked,
-                        knowledgeFolder: knowledgeFolder.text
-                    })
+                    onClicked: panel.statusText = settingsController.save(panel.formValues())
                 }
             }
         }

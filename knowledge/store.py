@@ -8,6 +8,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import numpy as np
@@ -22,6 +23,7 @@ class KnowledgeStore:
         self.root = root
         self.config = config.get("knowledge", {})
         self.folder = root / str(self.config.get("folder", "knowledge"))
+        self.vector_store_id = str(self.config.get("vector_store_id", "")).strip()
         self.cache_path = self.folder / ".vector_store.json"
         self.model = str(self.config.get("embedding_model", "text-embedding-3-small"))
         self.chunks: list[dict[str, Any]] = []
@@ -30,10 +32,22 @@ class KnowledgeStore:
         self.logger = logging.getLogger("KNOWLEDGE")
 
     async def initialize(self) -> bool:
-        self.folder.mkdir(parents=True, exist_ok=True)
         if not bool(self.config.get("enabled", True)):
             self.logger.info("knowledge disabled by configuration")
             return False
+
+        if self.vector_store_id:
+            if not self.vector_store_id.startswith("vs_"):
+                self.logger.warning("knowledge disabled: invalid OpenAI vector_store_id")
+                return False
+            if not os.getenv("OPENAI_API_KEY"):
+                self.logger.warning("knowledge disabled: OPENAI_API_KEY is not set")
+                return False
+            self.enabled = True
+            self.logger.info("knowledge ready from OpenAI vector store=%s", self.vector_store_id)
+            return True
+
+        self.folder.mkdir(parents=True, exist_ok=True)
         files = sorted(
             path for path in self.folder.rglob("*")
             if path.is_file() and path.suffix.casefold() in self.SUPPORTED
@@ -67,6 +81,8 @@ class KnowledgeStore:
         return True
 
     async def search(self, query: str) -> list[dict[str, Any]]:
+        if self.vector_store_id:
+            return await self._search_remote(query)
         if not self.enabled or self.matrix is None or not query.strip():
             return []
         api_key = os.getenv("OPENAI_API_KEY")
@@ -86,6 +102,44 @@ class KnowledgeStore:
             }
             for index in ranked if float(scores[int(index)]) >= minimum
         ]
+
+    async def _search_remote(self, query: str) -> list[dict[str, Any]]:
+        if not self.enabled or not query.strip():
+            return []
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return []
+
+        limit = max(1, min(50, int(self.config.get("max_results", 4))))
+        minimum = float(self.config.get("minimum_score", 0.20))
+        store_id = quote(self.vector_store_id, safe="")
+        timeout = httpx.Timeout(30.0, connect=15.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(
+                f"https://api.openai.com/v1/vector_stores/{store_id}/search",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={
+                    "query": query,
+                    "max_num_results": limit,
+                    "ranking_options": {"score_threshold": minimum},
+                },
+            )
+        response.raise_for_status()
+
+        results: list[dict[str, Any]] = []
+        for item in response.json().get("data", []):
+            text = "\n".join(
+                str(part.get("text", "")).strip()
+                for part in item.get("content", [])
+                if part.get("type") == "text" and part.get("text")
+            ).strip()
+            if text:
+                results.append({
+                    "source": str(item.get("filename") or item.get("file_id") or "unknown"),
+                    "text": text,
+                    "score": round(float(item.get("score", 0.0)), 4),
+                })
+        return results
 
     async def _embed(self, texts: list[str], api_key: str) -> list[list[float]]:
         output: list[list[float]] = []
