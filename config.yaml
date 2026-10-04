@@ -12,7 +12,7 @@ providers:
     thinking_level: minimal
   openai:
     model: gpt-realtime-2.1-mini
-    text_model: gpt-5-mini
+    text_model: gpt-5.6-luna
     voice: echo
     transcribe_model: gpt-4o-transcribe
 audio:
@@ -24,8 +24,8 @@ audio:
   output_device: pulse
   queue_size: 32
   output_queue_size: 128
-  playback_buffer_ms: 320
-  output_latency: high
+  playback_buffer_ms: 120
+  output_latency: low
   vad_enabled: true
   vad_minimum_level: 280
   vad_initial_noise_level: 120

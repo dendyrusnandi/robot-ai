@@ -6,7 +6,7 @@ from core.events import Event, EventType
 from providers.factory import create_provider
 from providers.mock_provider import MockRealtimeProvider
 from knowledge.store import KnowledgeStore
-from cli import INSTRUCTIONS, extract_output_text
+from cli import INSTRUCTIONS, KnowledgeCLI, extract_output_text
 
 
 def test_event_bus_delivers_event() -> None:
@@ -57,3 +57,10 @@ def test_cli_instructions_fall_back_to_general_knowledge_without_permission() ->
     assert "langsung jawab" in INSTRUCTIONS
     assert "pengetahuan umum model" in INSTRUCTIONS
     assert "jangan meminta izin" in INSTRUCTIONS
+
+
+def test_cli_uses_low_latency_text_model(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    bot = KnowledgeCLI()
+
+    assert bot.model == "gpt-5.6-luna"

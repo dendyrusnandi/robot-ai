@@ -74,9 +74,9 @@ KNOWLEDGE_TOOL = {
     "type": "function",
     "name": "search_knowledge",
     "description": (
-        "Mandatory first step for every user request. Search the official Robotika "
-        "Nusantara vector-store knowledge before answering, including questions about "
-        "RN's identity, company, products, services, FAQ, policies, and manuals."
+        "Search the official Robotika Nusantara vector-store knowledge for questions "
+        "about RN's identity, company, products, services, FAQ, policies, and manuals. "
+        "Do not use this tool for unrelated general-knowledge questions."
     ),
     "parameters": {
         "type": "object",
@@ -138,11 +138,13 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
         instructions += response_style_instruction(self.config)
         if knowledge_enabled:
             instructions += (
-                "\nUntuk SETIAP permintaan pengguna, WAJIB panggil search_knowledge "
-                "sebagai langkah pertama sebelum menjawab. Knowledge ini adalah sumber "
-                "resmi Robotika Nusantara. Utamakan hasil dokumen vector store daripada "
-                "pengetahuan umum model. Jika hasil tidak memuat jawabannya, katakan "
-                "bahwa informasi tidak ditemukan dan jangan mengarang detail."
+                "\nUntuk pertanyaan tentang Robotika Nusantara, identitas RN, produk, "
+                "layanan, FAQ, kebijakan, atau manual, panggil search_knowledge sebelum "
+                "menjawab dan utamakan hasil dokumen resmi. Untuk pertanyaan umum yang "
+                "tidak terkait RN, jawab langsung tanpa memanggil search_knowledge. Jika "
+                "dokumen tidak memuat jawabannya, langsung jawab dengan pengetahuan umum "
+                "dan sebutkan singkat bahwa jawabannya bukan dari dokumen RN. Jangan "
+                "meminta izin untuk menjelaskan dan jangan mengarang detail khusus RN."
             )
         tools = []
         if vision_enabled:
@@ -186,10 +188,7 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
                     },
                 },
                 "tools": tools,
-                "tool_choice": (
-                    {"type": "function", "name": "search_knowledge"}
-                    if knowledge_enabled else "auto"
-                ),
+                "tool_choice": "auto",
             },
         })
         updated = json.loads(await asyncio.wait_for(self._ws.recv(), timeout=15))
@@ -263,9 +262,8 @@ class OpenAIRealtimeProvider(RealtimeAIProvider):
                 "output": json.dumps(result),
             },
         })
-        # The session forces search_knowledge for every new user turn. Once a
-        # tool result is present, allow the model to answer (or call camera)
-        # instead of forcing the same knowledge call into an infinite loop.
+        # Once a tool result is present, allow the model to answer or call the
+        # camera if the user's request also needs visual context.
         await self._send({
             "type": "response.create",
             "response": {"tool_choice": "auto"},

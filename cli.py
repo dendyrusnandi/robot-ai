@@ -97,7 +97,9 @@ class KnowledgeCLI:
                 "vector_store_ids": [self.vector_store_id],
                 "max_num_results": self.max_results,
             }],
-            "tool_choice": "required",
+            # Let the model skip retrieval for general questions. The prompt
+            # still tells it to search first when RN knowledge is relevant.
+            "tool_choice": "auto",
             "stream": True,
         }
         if self.previous_response_id:
