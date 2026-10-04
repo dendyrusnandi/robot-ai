@@ -6,7 +6,7 @@ from core.events import Event, EventType
 from providers.factory import create_provider
 from providers.mock_provider import MockRealtimeProvider
 from knowledge.store import KnowledgeStore
-from cli import extract_output_text
+from cli import INSTRUCTIONS, extract_output_text
 
 
 def test_event_bus_delivers_event() -> None:
@@ -51,3 +51,9 @@ def test_cli_extracts_text_response() -> None:
     }
 
     assert extract_output_text(response) == "Jawaban dari knowledge."
+
+
+def test_cli_instructions_fall_back_to_general_knowledge_without_permission() -> None:
+    assert "langsung jawab" in INSTRUCTIONS
+    assert "pengetahuan umum model" in INSTRUCTIONS
+    assert "jangan meminta izin" in INSTRUCTIONS
